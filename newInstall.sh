@@ -199,7 +199,14 @@ installMysql () {
         echo "/etc/init.d/mysqld start";
     else
         apt-get update -y && apt-get install -y \
-            mysql-server 
+            mysql-server
+
+        echo "You must change your password.";
+        echo "Open a new terminal and run the folowing commands:";
+        echo "sudo mysql -uroot";
+        echo "ALTER USER 'root'@'localhost'IDENTIFIED WITH mysql_native_password BY 'your new password';";
+        echo "exit";
+        echo "sudo /etc/init.d/mysql restart";
     fi
 }
 
