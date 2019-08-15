@@ -6,18 +6,65 @@ then
     exit
 fi
 
-installVsCode () {
+installApache () {
 
-    
-    if dpkg-query -l | grep "code-insiders" &>/dev/null ;
+    if dpkg-query -l | grep "apache2" &>/dev/null ; 
     then
-        echo "Vs Code - Insiders already installed";
+        echo "Apache2 already installed";
     else
-        echo "Installing VS Code-insiders.";
-        curl -o code-insiders.deb -L https://go.microsoft.com/fwlink/?LinkID=760868
-        code-insiders.deb
-        dpkg -i code-insiders.deb
+        echo "Installing Apache2";
+        apt-get update -y && apt-get install -y \
+            apache2 \
+            curl
+        
+        echo "Enable Rewrite";
+        a2enmod rewrite
+        chown -R $USER:www-data /var/www/html/
+        chmod -R u-w /var/www/html/
+        chmod -R g+rx /var/www/html/
+
+        echo "Setup .htaccess rules and a virtual host @ http://inventory";
+        cp ./000-default.conf /etc/apache2/sites-enabled/000-default.conf
+
+        echo "Add http://inventory/ to /etc/hosts";
+        sed -i 's/127.0.0.1	localhost/127.0.0.1	localhost inventory/' /etc/hosts
+
+        echo "Restarting Apache.";
+        systemctl restart apache2
+
+        
+        if curl -s "http://localhost/" | grep "Apache2 Ubuntu Default Page" &>/dev/null ;
+        then
+            echo "Apache Installed Successfully";
+        else 
+            echo "Apache Install Failure. check settings @ /etc/apache2/hosts & /etc/apache2/sites-enabled/000-default.conf"
+            echo "Check settings @ /etc/apache2/hosts";
+            echo "Check settings @ /etc/apache2/sites-enabled/000-default.conf";
+        fi
     fi
+}
+
+installComposer () {
+    
+    echo "Installing Composer";
+    
+    EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+
+    if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
+    then
+        >&2 echo 'ERROR: Invalid installer signature'
+        rm composer-setup.php
+        exit 1
+    fi
+
+    php composer-setup.php --install-dir-=/usr/local/bin --filename=composer --quiet
+    RESULT=$?
+    rm composer-setup.php
+    chown -R $USER:$USER /home/$USER/.composer
+    echo "PATH=$PATH:/home/$USER/.composer/vendor/bin" >> /home/$USER/.profile
+    source /home/$USER/.profile
 }
 
 installDocker () {
@@ -50,8 +97,9 @@ installDocker () {
 
 installElasticsearch () {
     echo "Installing Elasticsearch with Security enabled.";
-    dpkg -i elasticsearch.deb
+    curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
 
+    dpkg -i elasticsearch.deb
     #echo 'xpack.security.enabled: true' >> /etc/elasticsearch/elasticsearch.yml;
     #echo 'xpack.ml.enabled: false' >> /etc/elasticsearch/elasticsearch.yml;
 
@@ -87,39 +135,16 @@ installKibana () {
     systemctl start kibana.service
 }
 
-installApache () {
-
-    if dpkg-query -l | grep "code-insiders" &>/dev/null ; 
-    then
-        echo "Apache2 already installed";
-    else
-        echo "Installing Apache2";
-        apt-get update -y && apt-get install -y \
-            apache2 \
-            curl
-        
-        echo "Enable Rewrite";
-        a2enmod rewrite
-        chown -R $USER:www-data /var/www/html/
-        chmod -R u-w /var/www/html/
-        chmod -R g+rx /var/www/html/
-
-        echo "Setup .htaccess rules and a virtual host @ http://inventory";
-        cp ./000-default.conf /etc/apache2/sites-enabled/000-default.conf
-
-        echo "Add inventory to /etc/hosts";
-        
-
-        echo "Restarting Apache.";
-        systemctl restart apache2
-
-        
-        if curl -s "http://localhost/" | grep "Apache2 Ubuntu Default Page" &>/dev/null ;
-        then
-            echo "Apache Installed Successfully";
-        else 
-            echo "Apache Install Failure check settings @ /etc/apache2/"
-        fi
+installLaravel () {
+    
+    echo "Installing Laravel with project: inventory @ /var/www/html";
+    
+    cd /var/www/html/
+    su - "$USER" -c "composer global require laravel/installer"
+    laravel new inventory
+    chown -R $USER:www-data inventory
+    chmod -R g+w ./inventory/storage/
+    chmod -R g+w ./inventory/bootstrap/cache
 }
 
 installMysql () {
@@ -165,60 +190,43 @@ installPhp () {
     echo "zend_extension=xdebug.so"      >> /etc/php/7.2/cli/php.ini
 }
 
-installComposer () {
-    
-    echo "Installing Composer";
-    
-    EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
-    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-    ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+installVsCode () {
 
-    if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
+    
+    if dpkg-query -l | grep "code-insiders" &>/dev/null ;
     then
-        >&2 echo 'ERROR: Invalid installer signature'
-        rm composer-setup.php
-        exit 1
+        echo "Vs Code - Insiders already installed";
+    else
+        echo "Installing VS Code-insiders.";
+        curl -o code-insiders.deb -L https://go.microsoft.com/fwlink/?LinkID=760868
+        code-insiders.deb
+        dpkg -i code-insiders.deb
     fi
-
-    php composer-setup.php --install-dir-=/usr/local/bin --filename=composer --quiet
-    RESULT=$?
-    rm composer-setup.php
-    chown -R $USER:$USER /home/$USER/.composer
-    echo "PATH=$PATH:/home/$USER/.composer/vendor/bin" >> /home/$USER/.profile
-    source /home/$USER/.profile
 }
 
-installLaravel () {
-    
-    echo "Installing Laravel with project: inventory @ /var/www/html";
-    
-    cd /var/www/html/
-    su - "$USER" -c "composer global require laravel/installer"
-    laravel new inventory
-    chown -R $USER:www-data inventory
-    chmod -R g+w ./inventory/storage/
-    chmod -R g+w ./inventory/bootstrap/cache
+displayhelp () {
+    echo "Requirements: Ubuntu version 16 +";
+    echo "";
+    echo "Usage: ./newInstall <option>";
+    echo "";
+    echo "           Parameter          |          Description           ";
+    echo "----------------------------------------------------------";
+    echo "         -A OR --all          : Install all available packages and dependancies (Apache1, Composer,Docker, Elasticsearch, Kibana, Mysql, Php, Vs Code)";
+    echo "";
+    echo "         -a OR --apache       : Install Apache2 and dependancies";
+    echo "         -c OR --composer     : Install Composer and dependancies";
+    echo "         -d OR --docker       : Install Docker and dependancies";
+    echo "         -e OR --eastic       : Install Elasticsearch and dependancies";
+    echo "         -k OR --kibana       : Install Kibana and dependancies";
+    echo "         -m OR --mysql        : Install Mysql and dependancies";
+    echo "         -p OR --php          : Install PHP7 and dependancies";
+    echo "         -v OR --vscode       : Install Vs Code and dependancies";
 }
 
 while test $# -gt 0; do
     case "$1" in
         -h|--help)
-            echo "Requirements: Ubuntu version 16 +";
-            echo "";
-            echo "Usage: ./newInstall <option>";
-            echo "";
-            echo "           Flag          |          Description           ";
-            echo "----------------------------------------------------------";
-            echo "-A OR --all            : Install all available packages and dependancies (Apache1, Composer,Docker, Elasticsearch, Kibana, Mysql, Php, Vs Code)";
-            echo "";
-            echo "-a OR --apache         : Install Apache2 and dependancies";
-            echo "-c OR --composer       : Install Composer and dependancies";
-            echo "-d OR --docker         : Install Docker and dependancies";
-            echo "-e OR --elastic        : Install Elasticsearch and dependancies";
-            echo "-k OR --kibana         : Install Kibana and dependancies";
-            echo "-m OR --mysql          : Install Mysql and dependancies";
-            echo "-p OR --php            : Install PHP7 and dependancies";
-            echo "-v OR --vscode         : Install Vs Code and dependancies";
+            displayhelp
             exit
             ;;
         -A|--all)
@@ -230,12 +238,10 @@ while test $# -gt 0; do
             installElasticsearch
             installKibana
             installVsCode
-            apt-get update -y
             exit
             ;;
         -a|--apache)
             installApache
-            apt-get update -y
             exit
             ;;
         -c|--composer)
@@ -245,27 +251,32 @@ while test $# -gt 0; do
             ;;
         -d|--docker)
             installDocker
-            apt-get update -y
             exit
             ;;
         -e|--elastic)
             installElasticsearch
-            apt-get update -y
             exit
             ;;
         -k|--kibana)
             installKibana
-            apt-get update -y
+            exit
+            ;;
+        -l)
+            installLaravel
+            exit
+            ;;
+        --lamp)
+            installApache
+            installMysql
+            installPhp
             exit
             ;;
         -m|--mysql)
             installApache
-            apt-get update -y
             exit
             ;;
         -p|--php)
             installPhp
-            apt-get update -y
             exit
             ;;
         -v|--vscode)
@@ -280,4 +291,4 @@ while test $# -gt 0; do
     esac
 done
 
-echo "You must enter a parameter, use --help for more info.";
+displayhelp
