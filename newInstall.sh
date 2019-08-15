@@ -8,7 +8,7 @@ fi
 
 installApache () {
 
-    if dpkg-query -l | grep "apache2" &>/dev/null ; 
+    if dpkg-query -l | grep "apache2" &>/dev/null
     then
         echo "Apache2 already installed";
     else
@@ -45,153 +45,209 @@ installApache () {
 }
 
 installComposer () {
-    
-    echo "Installing Composer";
-    
-    EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
-    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-    ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
 
-    if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
+    if ls -la  /bin | grep "composer" &>/dev/null
     then
-        >&2 echo 'ERROR: Invalid installer signature'
-        rm composer-setup.php
-        exit 1
-    fi
+        echo "Composer already installed globally @ /bin";
+    elif ls -la  /usr/local/bin | grep "composer" &>/dev/null
+    then
+        echo "Composer already installed globally  @ /usr/local/bin";
+    else
+        echo "Installing composer globally @ /usr/local/bin";
+        
+        EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
+        php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+        ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
 
-    php composer-setup.php --install-dir-=/usr/local/bin --filename=composer --quiet
-    RESULT=$?
-    rm composer-setup.php
-    chown -R $USER:$USER /home/$USER/.composer
-    echo "PATH=$PATH:/home/$USER/.composer/vendor/bin" >> /home/$USER/.profile
-    source /home/$USER/.profile
+        if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
+        then
+            >&2 echo 'ERROR: Invalid installer signature'
+            rm composer-setup.php
+            exit 1
+        fi
+
+        php composer-setup.php --install-dir-=/usr/local/bin --filename=composer --quiet
+        RESULT=$?
+        rm composer-setup.php
+        chown -R $USER:$USER /home/$USER/.composer
+        echo "PATH=$PATH:/home/$USER/.composer/vendor/bin" >> /home/$USER/.profile
+        source /home/$USER/.profile
+    fi
 }
 
 installDocker () {
-    
-    echo "Removing any older Docker installs.";
 
-    apt-get remove docker docker-engine docker.io containerd runc
-    
-    echo "Curl Docker key.";
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    if dpkg-query -l | grep "docker" &>/dev/null
+    then
+        echo "Docker already installed, to start it run dockerd ";
+    else
+        echo "Removing any older Docker installs.";
 
-    apt-get update -y && apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        gnupg-agent \
-        software-properties-common \
+        apt-get remove docker docker-engine docker.io containerd runc
+        
+        echo "Curl Docker key.";
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
-    echo "Add Docker Repository";
-    add-apt-repository \
-        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) \
-        stable"
+        apt-get update -y && apt-get install -y \
+            apt-transport-https \
+            ca-certificates \
+            gnupg-agent \
+            software-properties-common \
 
-    echo "Installing Docker";
-    apt-get install -y \
-        docker-ce \
-        docker-ce-cli \
-        containerd.io
+        echo "Add Docker Repository";
+        add-apt-repository \
+            "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) \
+            stable"
+
+        echo "Installing Docker";
+        apt-get install -y \
+            docker-ce \
+            docker-ce-cli \
+            containerd.io
+    fi
 }
 
 installElasticsearch () {
-    echo "Installing Elasticsearch with Security enabled.";
-    curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
 
-    dpkg -i elasticsearch.deb
-    #echo 'xpack.security.enabled: true' >> /etc/elasticsearch/elasticsearch.yml;
-    #echo 'xpack.ml.enabled: false' >> /etc/elasticsearch/elasticsearch.yml;
+    if dpkg-query -l | grep "elasticsearch" &>/dev/null
+    then
+        echo "Elasticsearch already installed.";
+        echo "To start it run: sudo systemctl restart elasticsearch.service";
+        echo "To view the logs: journalctl --unit elasticsearch --since yyyy-mm-dd";
+    else
+        echo "Installing Elasticsearch.";
+        curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
 
-    echo "Start Elasticsearch as a Service.";
-    systemctl daemon-reload
-    
-    # run as a service
-    systemctl enable elasticsearch.service
-    # start elastic service
-    systemctl start elasticsearch.service
+        dpkg -i elasticsearch.deb
+        #echo 'xpack.security.enabled: true' >> /etc/elasticsearch/elasticsearch.yml;
+        #echo 'xpack.ml.enabled: false' >> /etc/elasticsearch/elasticsearch.yml;
 
+        echo "Starting Elasticsearch as a Service.";
+        systemctl daemon-reload
+        
+        # run as a service
+        systemctl enable elasticsearch.service
+        # start elastic service
+        systemctl start elasticsearch.service
 
-    echo "Setup Elastic Passwords.";
-    . /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
+        echo "Setup Elastic Passwords.";
+        . /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
+
+        echo "To view logs run: journalctl --unit elasticsearch --since yyyy-mm-dd";
+    fi
 }
 
 installKibana () {
-    dpkg -i kibana.deb
 
-    #KIBANA_HASH = hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
+    if dpkg-query -l | grep "kibana" &>/dev/null
+    then
+        echo "Kibana already installed.";
+        echo "To start it run:";
+        echo "sudo systemctl restart kibana.service";
+        echo "To view the logs run:";
+        echo "journalctl --unit kibana --since yyyy-mm-dd";
+    else
+        echo "Installing Kibana.";
+        curl -o kibana.deb -L https://artifacts.elastic.co/downloads/kibana/kibana-7.2.1-amd64.deb
+        dpkg -i kibana.deb
 
-    #echo "xpack.security.encryptionKey: \"$KIBANA_HASH\"" >> /etc/kibana/kibana.yml;
-    echo "Set password to access Kibana:";
-    #read -p "Enter the elastic user pass created previously:" ELASTIC_PASS;
-    #sed -i 's/#elasticsearch.username: \"kibana\"/elasticsearch.username: \"elastic\"/1' /etc/kibana/kibana.yml
-    #sed -i "s/#elasticsearch.password: \"pass\"/elasticsearch.password: \"$ELASTIC_PASS\"/1" /etc/kibana/kibana.yml
-    
-    echo "Starting Kibana as a Service";
-    systemctl daemon-reload
+        #KIBANA_HASH = hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
 
-    systemctl enable kibana.service
+        #echo "xpack.security.encryptionKey: \"$KIBANA_HASH\"" >> /etc/kibana/kibana.yml;
+        echo "Set password to access Kibana:";
+        #read -p "Enter the elastic user pass created previously:" ELASTIC_PASS;
+        #sed -i 's/#elasticsearch.username: \"kibana\"/elasticsearch.username: \"elastic\"/1' /etc/kibana/kibana.yml
+        #sed -i "s/#elasticsearch.password: \"pass\"/elasticsearch.password: \"$ELASTIC_PASS\"/1" /etc/kibana/kibana.yml
+        
+        echo "Starting Kibana as a Service";
+        systemctl daemon-reload
 
-    systemctl start kibana.service
+        systemctl enable kibana.service
+
+        systemctl start kibana.service
+
+        echo "To view logs run: journalctl --unit kibana --since yyyy-mm-dd";
+    fi
 }
 
 installLaravel () {
     
-    echo "Installing Laravel with project: inventory @ /var/www/html";
-    
-    cd /var/www/html/
-    su - "$USER" -c "composer global require laravel/installer"
-    laravel new inventory
-    chown -R $USER:www-data inventory
-    chmod -R g+w ./inventory/storage/
-    chmod -R g+w ./inventory/bootstrap/cache
+    if ls -la /home/$USER/.composer/vendor/bin | grep "laravel"
+    then
+        echo "Laravel already installed.";
+        echo "To start a new project run:";
+        echo "laravel new <project name>";
+    else
+        echo "Installing Laravel with project: inventory @ /var/www/html";
+        
+        cd /var/www/html/
+        su - "$USER" -c "composer global require laravel/installer"
+        laravel new inventory
+        chown -R $USER:www-data inventory
+        chmod -R g+w ./inventory/storage/
+        chmod -R g+w ./inventory/bootstrap/cache
+    fi
 }
 
 installMysql () {
-    apt-get update -y && apt-get install -y \
-        mysql-server 
 
+    if dpkg-query -l | grep "mysql" &>/dev/null
+    then
+        echo "Mysql already installed.";
+        echo "To start it run: ";
+        echo "/etc/init.d/mysqld start";
+    else
+        apt-get update -y && apt-get install -y \
+            mysql-server 
+    fi
 }
 
 installPhp () {
 
-    echo "Installing PHP.";
+    if dpkg-query -l | grep "php7" &>/dev/null
+    then
+        echo "PHP7 already installed.";
+        echo "To verify it run: ";
+        echo "php -i";
+    else
+        echo "Installing PHP.";
 
-    apt-get update -y && apt-get install -y \
-        php-xdebug \
-        php-common \
-        php-json \
-        php-pear \
-        php-fpm \
-        php-dev \
-        php-zip \
-        php-curl \
-        php-xmlrpc \
-        php-gd \
-        php-mysql \
-        php-mbstring \
-        php-xml \
-        php7.2-bz2 \
-        libapache2-mod-php 
+        apt-get update -y && apt-get install -y \
+            php-xdebug \
+            php-common \
+            php-json \
+            php-pear \
+            php-fpm \
+            php-dev \
+            php-zip \
+            php-curl \
+            php-xmlrpc \
+            php-gd \
+            php-mysql \
+            php-mbstring \
+            php-xml \
+            php7.2-bz2 \
+            libapache2-mod-php 
 
-    echo "Enabling X-debug remote @ /etc/php/7.2/cli/php.ini";
-    echo "xdebug.remote_enable=1"        >> /etc/php/7.2/cli/php.ini
-    echo "Enabling X-debug remote auto_start @ /etc/php/7.2/cli/php.ini";
-    echo "xdebug.remote_autostart=1"     >> /etc/php/7.2/cli/php.ini
-    echo "Setting X-debug IDE key @ /etc/php/7.2/cli/php.ini";
-    echo "xdebug.idekey=VSCODE"          >> /etc/php/7.2/cli/php.ini
-    echo "Setting X-debug remote_host to 127.0.0.1 @ /etc/php/7.2/cli/php.ini";
-    echo "xdebug.remote_host=127.0.0.1"  >> /etc/php/7.2/cli/php.ini 
-    echo "Setting X-debug remote_port to 9000 @ /etc/php/7.2/cli/php.ini";
-    echo "xdebug.remote_port=9000"       >> /etc/php/7.2/cli/php.ini 
-    echo "Disabling X-debug remote_connect_back @ /etc/php/7.2/cli/php.ini";
-    echo "xdebug.remote_connect_back=0"  >> /etc/php/7.2/cli/php.ini
-    echo "Seting zend_extension to xdbug.so @ /etc/php/7.2/cli/php.ini";
-    echo "zend_extension=xdebug.so"      >> /etc/php/7.2/cli/php.ini
+        echo "Enabling X-debug remote @ /etc/php/7.2/cli/php.ini";
+        echo "xdebug.remote_enable=1"        >> /etc/php/7.2/cli/php.ini
+        echo "Enabling X-debug remote auto_start @ /etc/php/7.2/cli/php.ini";
+        echo "xdebug.remote_autostart=1"     >> /etc/php/7.2/cli/php.ini
+        echo "Setting X-debug IDE key @ /etc/php/7.2/cli/php.ini";
+        echo "xdebug.idekey=VSCODE"          >> /etc/php/7.2/cli/php.ini
+        echo "Setting X-debug remote_host to 127.0.0.1 @ /etc/php/7.2/cli/php.ini";
+        echo "xdebug.remote_host=127.0.0.1"  >> /etc/php/7.2/cli/php.ini 
+        echo "Setting X-debug remote_port to 9000 @ /etc/php/7.2/cli/php.ini";
+        echo "xdebug.remote_port=9000"       >> /etc/php/7.2/cli/php.ini 
+        echo "Disabling X-debug remote_connect_back @ /etc/php/7.2/cli/php.ini";
+        echo "xdebug.remote_connect_back=0"  >> /etc/php/7.2/cli/php.ini
+        echo "Seting zend_extension to xdbug.so @ /etc/php/7.2/cli/php.ini";
+        echo "zend_extension=xdebug.so"      >> /etc/php/7.2/cli/php.ini
+    fi
 }
 
 installVsCode () {
-
     
     if dpkg-query -l | grep "code-insiders" &>/dev/null ;
     then
@@ -205,22 +261,27 @@ installVsCode () {
 }
 
 displayhelp () {
-    echo "Requirements: Ubuntu version 16 +";
     echo "";
-    echo "Usage: ./newInstall <option>";
+    echo "    Requirements: Ubuntu version 16 +";
     echo "";
-    echo "           Parameter          |          Description           ";
-    echo "----------------------------------------------------------";
-    echo "         -A OR --all          : Install all available packages and dependancies (Apache1, Composer,Docker, Elasticsearch, Kibana, Mysql, Php, Vs Code)";
+    echo "    Usage: ./newInstall <option>";
     echo "";
-    echo "         -a OR --apache       : Install Apache2 and dependancies";
-    echo "         -c OR --composer     : Install Composer and dependancies";
-    echo "         -d OR --docker       : Install Docker and dependancies";
-    echo "         -e OR --eastic       : Install Elasticsearch and dependancies";
-    echo "         -k OR --kibana       : Install Kibana and dependancies";
-    echo "         -m OR --mysql        : Install Mysql and dependancies";
-    echo "         -p OR --php          : Install PHP7 and dependancies";
-    echo "         -v OR --vscode       : Install Vs Code and dependancies";
+    echo "         Parameter       |       Description        ";
+    echo "    ---------------------------------------------------";
+    echo "       -A OR --all       : Install all available packages and dependancies"
+    echo "                           (Apache2, Composer, Docker, Elasticsearch, Kibana, Laravel, Mysql, Php, Vs Code)";
+    echo "";
+    echo "       -a OR --apache    : Install Apache2 and dependancies";
+    echo "       -c OR --composer  : Install Composer and dependancies";
+    echo "       -d OR --docker    : Install Docker and dependancies";
+    echo "       -e OR --eastic    : Install Elasticsearch and dependancies";
+    echo "       -k OR --kibana    : Install Kibana and dependancies";
+    echo "       -l OR --laravel   : Install Laravel and dependancies";
+    echo "       --lamp            : Install Apache2, Mysql, PHP7 and dependancies";
+    echo "       -m OR --mysql     : Install Mysql and dependancies";
+    echo "       -p OR --php       : Install PHP7 and dependancies";
+    echo "       -v OR --vscode    : Install Vs Code and dependancies";
+    echo "";
 }
 
 while test $# -gt 0; do
@@ -234,6 +295,7 @@ while test $# -gt 0; do
             installMysql
             installPhp
             installComposer
+            installLaravel
             installDocker
             installElasticsearch
             installKibana
@@ -245,8 +307,7 @@ while test $# -gt 0; do
             exit
             ;;
         -c|--composer)
-            installApache
-            apt-get update -y
+            installComposer
             exit
             ;;
         -d|--docker)
@@ -272,7 +333,7 @@ while test $# -gt 0; do
             exit
             ;;
         -m|--mysql)
-            installApache
+            installMysql
             exit
             ;;
         -p|--php)
@@ -285,7 +346,7 @@ while test $# -gt 0; do
             exit
             ;;
         *)
-            echo "Invalid Parameter, use --help to see available commands";
+            echo "Invalid Parameter, use -h OR --help to see all available commands";
             exit
             ;;
     esac
