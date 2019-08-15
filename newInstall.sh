@@ -247,6 +247,17 @@ installPhp () {
     fi
 }
 
+installPhpmyadmin () {
+
+    echo "Installing PhpMyAdmin";
+    apt-get update -y && apt-get install -y \
+        phpmyadmin
+
+    ln -s /usr/share/phpmyadmin /var/www/html/
+    a2enconf phpmyadmin.conf
+    sudo service apache2 reload
+}
+
 installVsCode () {
     
     if dpkg-query -l | grep "code-insiders" &>/dev/null ;
@@ -280,6 +291,7 @@ displayhelp () {
     echo "       --lamp            : Install Apache2, Mysql, PHP7 and dependancies";
     echo "       -m OR --mysql     : Install Mysql and dependancies";
     echo "       -p OR --php       : Install PHP7 and dependancies";
+    echo "       -pma OR --pma     : Install PhpMyAdmin and dependancies";
     echo "       -v OR --vscode    : Install Vs Code and dependancies";
     echo "";
 }
@@ -338,6 +350,10 @@ while test $# -gt 0; do
             ;;
         -p|--php)
             installPhp
+            exit
+            ;;
+        -pma|--pma)
+            installPhpmyadmin
             exit
             ;;
         -v|--vscode)
