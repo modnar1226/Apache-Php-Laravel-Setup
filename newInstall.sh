@@ -70,8 +70,19 @@ installComposer () {
         RESULT=$?
         rm composer-setup.php
         chown -R $USER:$USER /home/$USER/.composer
-        echo "PATH=/home/$USER/.composer/vendor/bin:$PATH" >> ~/.profile
+        echo "PATH=/home/$USER/.composer/vendor/bin:$PATH" >> /home/$USER/.profile
         source /home/$USER/.profile
+
+        if echo $PATH | grep ":/bin:" &>/dev/null
+        then
+            echo "Composer installed successfully.";
+        else
+            source /etc/envrionment
+            sed -i '\|.composer/vendor/bin:$PATH|d' /home/$USER/.profile
+            source /home/$USER/.profile
+            echo "Composer could not be added to the your PATH.";
+            echo "You must add ./composer/vendor/bin or .composer/config/vendor.bin to your PATH";
+        fi
     fi
 }
 
