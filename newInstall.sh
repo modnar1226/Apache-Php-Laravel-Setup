@@ -131,12 +131,14 @@ installElasticsearch () {
         PWD=="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )";
         FILENAME=elasticsearch.deb;
         FILE="$PWD$FILE";
-        if [ -f "$FILE" ]; then
-            echo "$FILE exist"
-        fi
-
+        
         echo "Installing Elasticsearch.";
-        curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
+
+        if [ ! -f "$FILE" ]; then
+            echo "$FILENAME exists"
+        else 
+            curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
+        fi
 
         dpkg -i elasticsearch.deb
         #echo 'xpack.security.enabled: true' >> /etc/elasticsearch/elasticsearch.yml;
@@ -169,13 +171,24 @@ installKibana () {
         echo "journalctl --unit kibana --since yyyy-mm-dd";
     else
         echo "Installing Kibana.";
-        curl -o kibana.deb -L https://artifacts.elastic.co/downloads/kibana/kibana-7.2.1-amd64.deb
+
+        PWD=="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )";
+        FILENAME=kibana.deb;
+        FILE="$PWD$FILE";
+        
+        echo "Installing Elasticsearch.";
+
+        if [ ! -f "$FILE" ]; then
+            echo "$FILENAME exists"
+        else 
+            curl -o kibana.deb -L https://artifacts.elastic.co/downloads/kibana/kibana-7.2.1-amd64.deb
+        fi
         dpkg -i kibana.deb
 
         #KIBANA_HASH = hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
 
         #echo "xpack.security.encryptionKey: \"$KIBANA_HASH\"" >> /etc/kibana/kibana.yml;
-        echo "Set password to access Kibana:";
+        #echo "Set password to access Kibana:";
         #read -p "Enter the elastic user pass created previously:" ELASTIC_PASS;
         #sed -i 's/#elasticsearch.username: \"kibana\"/elasticsearch.username: \"elastic\"/1' /etc/kibana/kibana.yml
         #sed -i "s/#elasticsearch.password: \"pass\"/elasticsearch.password: \"$ELASTIC_PASS\"/1" /etc/kibana/kibana.yml
