@@ -121,12 +121,20 @@ installDocker () {
 
 installElasticsearch () {
 
+
     if dpkg-query -l | grep "elasticsearch" &>/dev/null
     then
         echo "Elasticsearch already installed.";
         echo "To start it run: sudo systemctl restart elasticsearch.service";
         echo "To view the logs: journalctl --unit elasticsearch --since yyyy-mm-dd";
     else
+        PWD=="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )";
+        FILENAME=elasticsearch.deb;
+        FILE="$PWD$FILE";
+        if [ -f "$FILE" ]; then
+            echo "$FILE exist"
+        fi
+
         echo "Installing Elasticsearch.";
         curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
 
@@ -142,8 +150,9 @@ installElasticsearch () {
         # start elastic service
         systemctl start elasticsearch.service
 
-        echo "Setup Elastic Passwords.";
-        . /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
+        #echo "Setup Elastic Passwords.";
+        #cd /usr/share/elasticsearch/bin/
+        #./elasticsearch-setup-passwords interactive
 
         echo "To view logs run: journalctl --unit elasticsearch --since yyyy-mm-dd";
     fi
