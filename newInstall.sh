@@ -19,7 +19,7 @@ installApache () {
         
         echo "Enable Rewrite";
         a2enmod rewrite
-        chown -R $USER:www-data /var/www/html/
+        chown -R $SUDO_USER:www-data /var/www/html/
         chmod -R u-w /var/www/html/
         chmod -R g+rx /var/www/html/
 
@@ -69,20 +69,20 @@ installComposer () {
         php composer-setup.php --install-dir-=/usr/local/bin --filename=composer --quiet
         RESULT=$?
         rm composer-setup.php
-        chown -R $USER:$USER /home/$USER/.composer
-        echo "PATH=/home/$USER/.composer/vendor/bin:$PATH" >> /home/$USER/.profile
-        source /home/$USER/.profile
+        chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.composer
+        #echo 'PATH="$PATH:$HOME/.composer/vendor/bin"' >> $HOME/.profile
+        #source /home/$USER/.profile
 
-        if echo $PATH | grep ":/bin:" &>/dev/null
-        then
-            echo "Composer installed successfully.";
-        else
-            source /etc/envrionment
-            sed -i '\|.composer/vendor/bin:$PATH|d' /home/$USER/.profile
-            source /home/$USER/.profile
-            echo "Composer could not be added to the your PATH.";
-            echo "You must add ./composer/vendor/bin or .composer/config/vendor.bin to your PATH";
-        fi
+        #if echo $PATH | grep ":/bin:" &>/dev/null
+        #then
+        #    echo "Composer installed successfully.";
+        #else
+        #    source /etc/envrionment
+        #    sed -i '\|.composer/vendor/bin:$PATH|d' /home/$USER/.profile
+        #    source /home/$USER/.profile
+        #    echo "Composer could not be added to the your PATH.";
+        #    echo "You must add ./composer/vendor/bin or .composer/config/vendor.bin to your PATH";
+        #fi
     fi
 }
 
@@ -184,7 +184,7 @@ installKibana () {
 
 installLaravel () {
     
-    if ls -la /home/$USER/.composer/vendor/bin | grep "laravel"
+    if ls -la /home/$SUDO_USER/.composer/vendor/bin | grep "laravel"
     then
         echo "Laravel already installed.";
         echo "To start a new project run:";
@@ -193,9 +193,9 @@ installLaravel () {
         echo "Installing Laravel with project: inventory @ /var/www/html";
         
         cd /var/www/html/
-        su - "$USER" -c "composer global require laravel/installer"
+        su - "$SUDO_USER" -c "composer global require laravel/installer"
         laravel new inventory
-        chown -R $USER:www-data inventory
+        chown -R $SUDO_USER:www-data inventory
         chmod -R g+w ./inventory/storage/
         chmod -R g+w ./inventory/bootstrap/cache
     fi
@@ -298,7 +298,7 @@ displayhelp () {
     echo "         Parameter       |       Description        ";
     echo "    ---------------------------------------------------";
     echo "       -A OR --all       : Install all available packages and dependancies"
-    echo "                           (Apache2, Composer, Docker, Elasticsearch, Kibana, Laravel, Mysql, Php, Vs Code)";
+    echo "                           (Apache2, Composer, Docker, Elasticsearch, Kibana, Laravel, Mysql, Php, PhpMyAdmin, Vs Code)";
     echo "";
     echo "       -a OR --apache    : Install Apache2 and dependancies";
     echo "       -c OR --composer  : Install Composer and dependancies";
@@ -352,7 +352,7 @@ while test $# -gt 0; do
             installKibana
             exit
             ;;
-        -l)
+        -l|--laravel)
             installLaravel
             exit
             ;;
