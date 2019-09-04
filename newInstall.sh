@@ -70,7 +70,7 @@ installComposer () {
         RESULT=$?
         rm composer-setup.php
         chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.composer
-        #echo 'PATH="$PATH:$HOME/.composer/vendor/bin"' >> $HOME/.profile
+        #echo 'PATH="$PATH:/home/$SUDO_USER/.composer/vendor/bin"' >> /home/$SUDO_USER/.profile
         #source /home/$USER/.profile
 
         #if echo $PATH | grep ":/bin:" &>/dev/null
