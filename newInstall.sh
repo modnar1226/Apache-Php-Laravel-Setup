@@ -19,7 +19,7 @@ installApache () {
         
         echo "Enable Rewrite";
         a2enmod rewrite
-        chown -R $SUDO_USER:www-data /var/www/html/
+        chown -R $USER:www-data /var/www/html/
         chmod -R u-w /var/www/html/
         chmod -R g+rx /var/www/html/
 
@@ -66,20 +66,20 @@ installComposer () {
             exit 1
         fi
 
-        php composer-setup.php --install-dir=/usr/local/bin/ --filename=composer --quiet
+        php composer-setup.php --install-dir-=/usr/local/bin --filename=composer --quiet
         RESULT=$?
         rm composer-setup.php
-        chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.composer
-        echo "PATH=/home/$SUDO_USER/.composer/vendor/bin:$PATH" >> /home/$SUDO_USER/.profile
-        source /home/$SUDO_USER/.profile
+        chown -R $USER:$USER /home/$USER/.composer
+        echo "PATH=/home/$USER/.composer/vendor/bin:$PATH" >> /home/$USER/.profile
+        source /home/$USER/.profile
 
         if echo $PATH | grep ":/bin:" &>/dev/null
         then
             echo "Composer installed successfully.";
         else
             source /etc/envrionment
-            sed -i '\|.composer/vendor/bin:$PATH|d' /home/$SUDO_USER/.profile
-            source /home/$SUDO_USER/.profile
+            sed -i '\|.composer/vendor/bin:$PATH|d' /home/$USER/.profile
+            source /home/$USER/.profile
             echo "Composer could not be added to the your PATH.";
             echo "You must add ./composer/vendor/bin or .composer/config/vendor.bin to your PATH";
         fi
@@ -185,7 +185,7 @@ installKibana () {
 
 installLaravel () {
     
-    if ls -la /home/$SUDO_USER/.composer/vendor/bin | grep "laravel" &>/dev/null
+    if ls -la /home/$USER/.composer/vendor/bin | grep "laravel"
     then
         echo "Laravel already installed.";
         echo "To start a new project run:";
@@ -194,11 +194,11 @@ installLaravel () {
         echo "Installing Laravel with project: inventory @ /var/www/html";
         
         cd /var/www/html/
-        su - "$SUDO_USER" -c "composer global require laravel/installer"
-        #laravel new inventory
-        #chown -R $SUDO_USER:www-data inventory
-        #chmod -R g+w ./inventory/storage/
-        #chmod -R g+w ./inventory/bootstrap/cache
+        su - "$USER" -c "composer global require laravel/installer"
+        laravel new inventory
+        chown -R $USER:www-data inventory
+        chmod -R g+w ./inventory/storage/
+        chmod -R g+w ./inventory/bootstrap/cache
     fi
 }
 
@@ -216,7 +216,7 @@ installMysql () {
         echo "You must change your password.";
         echo "Open a new terminal and run the folowing commands:";
         echo "sudo mysql -uroot";
-        echo "ALTER USER 'root'@'localhost'IDENTIFIED WITH mysql_native_password BY 'bamBoozeAle';";
+        echo "ALTER USER 'root'@'localhost'IDENTIFIED WITH mysql_native_password BY 'your new password';";
         echo "exit";
         echo "sudo /etc/init.d/mysql restart";
     fi
