@@ -118,14 +118,24 @@ installDocker () {
 
 installElasticsearch () {
 
+
     if dpkg-query -l | grep "elasticsearch" &>/dev/null
     then
         echo "Elasticsearch already installed.";
         echo "To start it run: sudo systemctl restart elasticsearch.service";
         echo "To view the logs: journalctl --unit elasticsearch --since yyyy-mm-dd";
     else
+        PWD=="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )";
+        FILENAME=elasticsearch.deb;
+        FILE="$PWD$FILE";
+        
         echo "Installing Elasticsearch.";
-        curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
+
+        if [ ! -f "$FILE" ]; then
+            echo "$FILENAME exists"
+        else 
+            curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
+        fi
 
         dpkg -i elasticsearch.deb
         #echo 'xpack.security.enabled: true' >> /etc/elasticsearch/elasticsearch.yml;
@@ -139,8 +149,9 @@ installElasticsearch () {
         # start elastic service
         systemctl start elasticsearch.service
 
-        echo "Setup Elastic Passwords.";
-        . /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
+        #echo "Setup Elastic Passwords.";
+        #cd /usr/share/elasticsearch/bin/
+        #./elasticsearch-setup-passwords interactive
 
         echo "To view logs run: journalctl --unit elasticsearch --since yyyy-mm-dd";
     fi
@@ -157,13 +168,24 @@ installKibana () {
         echo "journalctl --unit kibana --since yyyy-mm-dd";
     else
         echo "Installing Kibana.";
-        curl -o kibana.deb -L https://artifacts.elastic.co/downloads/kibana/kibana-7.2.1-amd64.deb
+
+        PWD=="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )";
+        FILENAME=kibana.deb;
+        FILE="$PWD$FILE";
+        
+        echo "Installing Elasticsearch.";
+
+        if [ ! -f "$FILE" ]; then
+            echo "$FILENAME exists"
+        else 
+            curl -o kibana.deb -L https://artifacts.elastic.co/downloads/kibana/kibana-7.2.1-amd64.deb
+        fi
         dpkg -i kibana.deb
 
         #KIBANA_HASH = hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
 
         #echo "xpack.security.encryptionKey: \"$KIBANA_HASH\"" >> /etc/kibana/kibana.yml;
-        echo "Set password to access Kibana:";
+        #echo "Set password to access Kibana:";
         #read -p "Enter the elastic user pass created previously:" ELASTIC_PASS;
         #sed -i 's/#elasticsearch.username: \"kibana\"/elasticsearch.username: \"elastic\"/1' /etc/kibana/kibana.yml
         #sed -i "s/#elasticsearch.password: \"pass\"/elasticsearch.password: \"$ELASTIC_PASS\"/1" /etc/kibana/kibana.yml
@@ -180,14 +202,13 @@ installKibana () {
 }
 
 installLaravel () {
-    
     if ls -la /home/$SUDO_USER/.composer/vendor/bin | grep "laravel" &>/dev/null
     then
         echo "Laravel already installed.";
         echo "To start a new project run:";
         echo "laravel new <project name>";
     else
-        echo "Installing Laravel with project: inventory @ /var/www/html";
+        echo "Installing Laravel";
         
         cd /var/www/html/
         su - "$SUDO_USER" -c "composer global require laravel/installer"
@@ -291,7 +312,7 @@ displayhelp () {
     echo "         Parameter       |       Description        ";
     echo "    ---------------------------------------------------";
     echo "       -A OR --all       : Install all available packages and dependancies"
-    echo "                           (Apache2, Composer, Docker, Elasticsearch, Kibana, Laravel, Mysql, Php, Vs Code)";
+    echo "                           (Apache2, Composer, Docker, Elasticsearch, Kibana, Laravel, Mysql, Php, PhpMyAdmin, Vs Code)";
     echo "";
     echo "       -a OR --apache    : Install Apache2 and dependancies";
     echo "       -c OR --composer  : Install Composer and dependancies";
@@ -345,7 +366,7 @@ while test $# -gt 0; do
             installKibana
             exit
             ;;
-        -l)
+        -l|--laravel)
             installLaravel
             exit
             ;;
