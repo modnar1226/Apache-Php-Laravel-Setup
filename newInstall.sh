@@ -19,7 +19,7 @@ installApache () {
         
         echo "Enable Rewrite";
         a2enmod rewrite
-        chown -R $USER:www-data /var/www/html/
+        chown -R $SUDO_USER:www-data /var/www/html/
         chmod -R u-w /var/www/html/
         chmod -R g+rx /var/www/html/
 
@@ -69,20 +69,20 @@ installComposer () {
         php composer-setup.php --install-dir-=/usr/local/bin --filename=composer --quiet
         RESULT=$?
         rm composer-setup.php
-        chown -R $USER:$USER /home/$USER/.composer
-        echo "PATH=/home/$USER/.composer/vendor/bin:$PATH" >> /home/$USER/.profile
-        source /home/$USER/.profile
+        chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.composer
+        #echo 'PATH="$PATH:/home/$SUDO_USER/.composer/vendor/bin"' >> /home/$SUDO_USER/.profile
+        #source /home/$USER/.profile
 
-        if echo $PATH | grep ":/bin:" &>/dev/null
-        then
-            echo "Composer installed successfully.";
-        else
-            source /etc/envrionment
-            sed -i '\|.composer/vendor/bin:$PATH|d' /home/$USER/.profile
-            source /home/$USER/.profile
-            echo "Composer could not be added to the your PATH.";
-            echo "You must add ./composer/vendor/bin or .composer/config/vendor.bin to your PATH";
-        fi
+        #if echo $PATH | grep ":/bin:" &>/dev/null
+        #then
+        #    echo "Composer installed successfully.";
+        #else
+        #    source /etc/envrionment
+        #    sed -i '\|.composer/vendor/bin:$PATH|d' /home/$USER/.profile
+        #    source /home/$USER/.profile
+        #    echo "Composer could not be added to the your PATH.";
+        #    echo "You must add ./composer/vendor/bin or .composer/config/vendor.bin to your PATH";
+        #fi
     fi
 }
 
@@ -122,14 +122,24 @@ installDocker () {
 
 installElasticsearch () {
 
+
     if dpkg-query -l | grep "elasticsearch" &>/dev/null
     then
         echo "Elasticsearch already installed.";
         echo "To start it run: sudo systemctl restart elasticsearch.service";
         echo "To view the logs: journalctl --unit elasticsearch --since yyyy-mm-dd";
     else
+        PWD=="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )";
+        FILENAME=elasticsearch.deb;
+        FILE="$PWD$FILE";
+        
         echo "Installing Elasticsearch.";
-        curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
+
+        if [ ! -f "$FILE" ]; then
+            echo "$FILENAME exists"
+        else 
+            curl -o elasticsearch.deb -L https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-amd64.deb
+        fi
 
         dpkg -i elasticsearch.deb
         #echo 'xpack.security.enabled: true' >> /etc/elasticsearch/elasticsearch.yml;
@@ -143,8 +153,9 @@ installElasticsearch () {
         # start elastic service
         systemctl start elasticsearch.service
 
-        echo "Setup Elastic Passwords.";
-        . /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
+        #echo "Setup Elastic Passwords.";
+        #cd /usr/share/elasticsearch/bin/
+        #./elasticsearch-setup-passwords interactive
 
         echo "To view logs run: journalctl --unit elasticsearch --since yyyy-mm-dd";
     fi
@@ -161,13 +172,24 @@ installKibana () {
         echo "journalctl --unit kibana --since yyyy-mm-dd";
     else
         echo "Installing Kibana.";
-        curl -o kibana.deb -L https://artifacts.elastic.co/downloads/kibana/kibana-7.2.1-amd64.deb
+
+        PWD=="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )";
+        FILENAME=kibana.deb;
+        FILE="$PWD$FILE";
+        
+        echo "Installing Elasticsearch.";
+
+        if [ ! -f "$FILE" ]; then
+            echo "$FILENAME exists"
+        else 
+            curl -o kibana.deb -L https://artifacts.elastic.co/downloads/kibana/kibana-7.2.1-amd64.deb
+        fi
         dpkg -i kibana.deb
 
         #KIBANA_HASH = hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
 
         #echo "xpack.security.encryptionKey: \"$KIBANA_HASH\"" >> /etc/kibana/kibana.yml;
-        echo "Set password to access Kibana:";
+        #echo "Set password to access Kibana:";
         #read -p "Enter the elastic user pass created previously:" ELASTIC_PASS;
         #sed -i 's/#elasticsearch.username: \"kibana\"/elasticsearch.username: \"elastic\"/1' /etc/kibana/kibana.yml
         #sed -i "s/#elasticsearch.password: \"pass\"/elasticsearch.password: \"$ELASTIC_PASS\"/1" /etc/kibana/kibana.yml
@@ -185,7 +207,7 @@ installKibana () {
 
 installLaravel () {
     
-    if ls -la /home/$USER/.composer/vendor/bin | grep "laravel"
+    if ls -la /home/$SUDO_USER/.composer/vendor/bin | grep "laravel"
     then
         echo "Laravel already installed.";
         echo "To start a new project run:";
@@ -194,9 +216,9 @@ installLaravel () {
         echo "Installing Laravel with project: inventory @ /var/www/html";
         
         cd /var/www/html/
-        su - "$USER" -c "composer global require laravel/installer"
+        su - "$SUDO_USER" -c "composer global require laravel/installer"
         laravel new inventory
-        chown -R $USER:www-data inventory
+        chown -R $SUDO_USER:www-data inventory
         chmod -R g+w ./inventory/storage/
         chmod -R g+w ./inventory/bootstrap/cache
     fi
@@ -299,7 +321,7 @@ displayhelp () {
     echo "         Parameter       |       Description        ";
     echo "    ---------------------------------------------------";
     echo "       -A OR --all       : Install all available packages and dependancies"
-    echo "                           (Apache2, Composer, Docker, Elasticsearch, Kibana, Laravel, Mysql, Php, Vs Code)";
+    echo "                           (Apache2, Composer, Docker, Elasticsearch, Kibana, Laravel, Mysql, Php, PhpMyAdmin, Vs Code)";
     echo "";
     echo "       -a OR --apache    : Install Apache2 and dependancies";
     echo "       -c OR --composer  : Install Composer and dependancies";
@@ -353,7 +375,7 @@ while test $# -gt 0; do
             installKibana
             exit
             ;;
-        -l)
+        -l|--laravel)
             installLaravel
             exit
             ;;
