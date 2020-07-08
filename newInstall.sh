@@ -16,7 +16,7 @@ installApache () {
         apt-get update -y && apt-get install -y \
             apache2 \
             curl
-        
+
         echo "Enable Rewrite";
         a2enmod rewrite
         chown -R $SUDO_USER:www-data /var/www/html/
@@ -26,14 +26,10 @@ installApache () {
         echo "Setup .htaccess rules and a virtual host @ http://inventory";
         cp ./000-default.conf /etc/apache2/sites-enabled/000-default.conf
 
-        echo "Add http://inventory/ to /etc/hosts";
-        sed -i 's/127.0.0.1	localhost/127.0.0.1	localhost inventory/' /etc/hosts
-
         echo "Restarting Apache.";
         systemctl restart apache2
 
-        
-        if curl -s "http://localhost/" | grep "Apache2 Ubuntu Default Page" &>/dev/null ;
+        if dpkg-query -l | grep "apache2" &>/dev/null
         then
             echo "Apache Installed Successfully";
         else 
@@ -195,10 +191,6 @@ installLaravel () {
         
         cd /var/www/html/
         su - "$SUDO_USER" -c "composer global require laravel/installer"
-        #laravel new inventory
-        #chown -R $SUDO_USER:www-data inventory
-        #chmod -R g+w ./inventory/storage/
-        #chmod -R g+w ./inventory/bootstrap/cache
     fi
 }
 
@@ -209,16 +201,16 @@ installMysql () {
         echo "Mysql already installed.";
         echo "To start it run: ";
         echo "/etc/init.d/mysqld start";
+	echo "If you haven't set up a password use the following command";
     else
         apt-get update -y && apt-get install -y \
             mysql-server
 
-        echo "You must change your password.";
-        echo "Open a new terminal and run the folowing commands:";
-        echo "sudo mysql -uroot";
-        echo "ALTER USER 'root'@'localhost'IDENTIFIED WITH mysql_native_password BY 'bamBoozeAle';";
-        echo "exit";
-        echo "sudo /etc/init.d/mysql restart";
+        if dpkg-query -l | grep "mysql" &>/dev/null
+        then
+	    echo "Mysql Installed successfully";
+        fi
+
     fi
 }
 
@@ -361,6 +353,16 @@ while test $# -gt 0; do
             installApache
             installMysql
             installPhp
+	    if dpkg-query -l | grep "mysql" &>/dev/null
+            then
+	        echo "You must change your password.";
+                echo "Open a new terminal and run the folowing commands:";
+                echo "sudo mysql -uroot";
+                echo "ALTER USER 'root'@'localhost'IDENTIFIED WITH mysql_native_password BY 'your new password';";
+                echo "exit";
+                echo "sudo /etc/init.d/mysql restart";
+
+            fi
             exit
             ;;
         -m|--mysql)
