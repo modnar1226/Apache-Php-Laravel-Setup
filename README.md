@@ -3,7 +3,7 @@ Ubuntu based helper script for stuff a php dev needs
 
     Requirements: Ubuntu version 16 +
 
-    Usage: ./newInstall <option>
+    Usage: sudo ./newInstall <option>
 
          Parameter       |       Description        
     ---------------------------------------------------
