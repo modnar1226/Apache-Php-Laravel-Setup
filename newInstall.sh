@@ -23,7 +23,7 @@ installApache () {
         chmod -R u-w /var/www/html/
         chmod -R g+rx /var/www/html/
 
-        echo "Setup .htaccess rules and a virtual host @ http://inventory";
+        echo "Setup .htaccess rules and a virtual host @ http://localhost";
         cp ./000-default.conf /etc/apache2/sites-enabled/000-default.conf
 
         echo "Restarting Apache.";
@@ -65,7 +65,7 @@ installComposer () {
         php composer-setup.php --install-dir=/usr/local/bin/ --filename=composer --quiet
         RESULT=$?
         rm composer-setup.php
-        chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.composer
+        chown -R $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.config/composer
         echo "PATH=/home/$SUDO_USER/.composer/vendor/bin:$PATH" >> /home/$SUDO_USER/.profile
         source /home/$SUDO_USER/.profile
 
@@ -222,7 +222,7 @@ installMysql () {
         echo "Mysql already installed.";
         echo "To start it run: ";
         echo "/etc/init.d/mysqld start";
-	echo "If you haven't set up a password use the following command";
+	#echo "If you haven't set up a password use the following command";
     else
         apt-get update -y && apt-get install -y \
             mysql-server
