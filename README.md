@@ -1,5 +1,7 @@
 # Apache-Php-Laravel-Setup
 Ubuntu based helper script for stuff a php dev needs
+This is solely a developers environment and not suitable for production environments.
+XDebug is installed as well with the php dependancies. Comment out that line in the newInstall.sh file if you do no want/ need it.
 
     Requirements: Ubuntu version 16 +
 
